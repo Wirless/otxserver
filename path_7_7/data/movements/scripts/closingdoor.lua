@@ -1,31 +1,36 @@
-function onStepOut(creature, item, position, fromPosition)
-	local tile = Tile(position)
-	if tile:getCreatureCount() > 0 then
-		return true
+function doRelocateTest(pos, toPos)
+pos.stackpos = 1
+while getThingfromPos(pos).uid > 0 do
+doTeleportThing(getThingfromPos(pos).uid, toPos)
+pos.stackpos = pos.stackpos + 1
+end
+end
+function onStepOut(cid, item, pos)
+	if(item.actionid == 0) then
+		-- This is not a special door
+		return TRUE
 	end
 
-	local newPosition = {x = position.x + 1, y = position.y, z = position.z}
-	local query = Tile(newPosition):queryAdd(creature)
-	if query ~= RETURNVALUE_NOERROR or query == RETURNVALUE_NOTENOUGHROOM then
-		newPosition.x = newPosition.x - 1
-		newPosition.y = newPosition.y + 1
-		query = Tile(newPosition):queryAdd(creature)
-	end
+	local topos = getPlayerPosition(cid)
+	doRelocateTest(pos, topos)
 
-	if query == RETURNVALUE_NOERROR or query ~= RETURNVALUE_NOTENOUGHROOM then
-		doRelocate(position, newPosition)
-	end
+	-- Remove any item that was not moved
+	-- Happens when there is an unmoveable item on the door, ie. a fire field
+	local tmpPos = {x=pos.x, y=pos.y, z=pos.z, stackpos=-1}
+	local tileCount = getTileThingByPos(tmpPos)
+	local i = 1
+	local tmpItem = {uid = 1}
 
-	local i, tileItem, tileCount = 1, true, tile:getThingCount()
-	while tileItem and i < tileCount do
-		tileItem = tile:getThing(i)
-		if tileItem and tileItem:getUniqueId() ~= item.uid and tileItem:getType():isMovable() then
-			tileItem:remove()
+	while(tmpItem.uid ~= 0 and i < tileCount) do
+		tmpPos.stackpos = i
+		tmpItem = getTileThingByPos(tmpPos)
+		if(tmpItem.uid ~= item.uid and tmpItem.uid ~= 0) then
+			doRemoveItem(tmpItem.uid)
 		else
 			i = i + 1
 		end
 	end
 
-	item:transform(item.itemid - 1)
-	return true
+	doTransformItem(item.uid, item.itemid-1)
+	return TRUE
 end
